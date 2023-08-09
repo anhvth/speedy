@@ -97,7 +97,7 @@ def imemoize(func):
     return _f
 
 
-def multi_thread(func, args_list, kwargs_list=None, pbar='tqdm', num_workers=4):
+def multi_thread(func, args_list, kwargs_list=None, pbar='tqdm', n_workers=4):
     """
     Executes a function in parallel using multiple threads.
 
@@ -121,7 +121,7 @@ def multi_thread(func, args_list, kwargs_list=None, pbar='tqdm', num_workers=4):
         return func(*args, **kwargs)
 
     results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         if pbar:
             for result in tqdm(executor.map(wrapper, args_list, kwargs_list), total=len(args_list)):
                 results.append(result)
@@ -132,18 +132,14 @@ def multi_thread(func, args_list, kwargs_list=None, pbar='tqdm', num_workers=4):
     return results
 
 
-def multi_process(f, inputs, max_workers=8, desc='',
-               unit='Samples', verbose=True, pbar_iterval=10):
-    if verbose:
+def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
+    logger.info('Multi processing {} | Num samples: {}', f.__name__, len(inputs))
+    pbar = tqdm(total=len(inputs), desc=desc)
         
-        logger.info('Multi processing {} | Num samples: {}', f.__name__, len(inputs))
-        pbar = tqdm(total=len(inputs))
-        
-    with Pool(max_workers) as p:
+    with Pool(n_workers) as p:
         it = p.imap(f, inputs)
         return_list = []
         for i, ret in enumerate(it):
             return_list.append(ret)
-            if i % pbar_iterval == 0 and verbose:
-                pbar.update(pbar_iterval)
+            pbar.update()
     return return_list
