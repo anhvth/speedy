@@ -7,6 +7,8 @@ import os.path as osp
 import pickle
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
+import concurrent.futures
+from tqdm import tqdm
 
 import xxhash
 from loguru import logger
@@ -97,40 +99,35 @@ def imemoize(func):
     return _f
 
 
-def multi_thread(func, args_list, kwargs_list=None, pbar='tqdm', n_workers=4):
+
+
+def multi_thread(func, call_args_list, pbar='tqdm', n_workers=4):
     """
     Executes a function in parallel using multiple threads.
 
     Parameters:
     - func: The function to execute.
-    - args_list: A list of argument tuples. Each tuple contains arguments for one call of `func`.
-    - kwargs_list: A list of dictionaries. Each dictionary contains keyword arguments for one call of `func`.
+    - call_args_list: A list of dictionaries. Each dictionary contains arguments and keyword arguments for one call of `func`.
     - pbar: Whether to show a progress bar. Default is 'tqdm'. If None, no progress bar is shown.
-    - num_workers: The number of worker threads.
+    - n_workers: The number of worker threads.
 
     Returns:
     A list of results.
     """
 
-    # If kwargs_list is not provided or is None, make it an empty dict for each set of args.
-    if kwargs_list is None:
-        kwargs_list = [{} for _ in args_list]
-
-    # Function to execute in each thread
-    def wrapper(args, kwargs):
-        return func(*args, **kwargs)
+    def wrapper(call_args):
+        return func(**call_args)
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         if pbar:
-            for result in tqdm(executor.map(wrapper, args_list, kwargs_list), total=len(args_list)):
+            for result in tqdm(executor.map(wrapper, call_args_list), total=len(call_args_list)):
                 results.append(result)
         else:
-            for result in executor.map(wrapper, args_list, kwargs_list):
+            for result in executor.map(wrapper, call_args_list):
                 results.append(result)
 
     return results
-
 
 def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
     logger.info('Multi processing {} | Num samples: {}', f.__name__, len(inputs))
