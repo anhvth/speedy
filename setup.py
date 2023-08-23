@@ -11,6 +11,9 @@ setup(
     install_requires=[  # List any dependencies your package requires
         'numpy',
         'requests',
+        'xxhash',
+        'loguru',
+        'fastcore',
     ],
     classifiers=[  # Provide information about your package for PyPI
         'License :: OSI Approved :: MIT License',
