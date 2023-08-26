@@ -12,6 +12,7 @@ def dump_json_or_pickle(obj, fname):
     """
         Dump an object to a file, support both json and pickle
     """
+    mkdir_or_exist(os.path.dirname(fname))
     if fname.endswith('.json'):
         with open(fname, 'w') as f:
             json.dump(obj, f)
