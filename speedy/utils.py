@@ -12,7 +12,7 @@ def dump_json_or_pickle(obj, fname):
     """
         Dump an object to a file, support both json and pickle
     """
-    mkdir_or_exist(os.path.dirname(fname))
+    mkdir_or_exist(os.path.dirname(osp.abspath(fname)))
     if fname.endswith('.json'):
         with open(fname, 'w') as f:
             json.dump(obj, f)
@@ -38,33 +38,41 @@ def identify(x):
     return xxhash.xxh64(pickle.dumps(x), seed=0).hexdigest()
 
 
-def memoize(func):
+def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', verbose=False, force=False):
     '''Cache result of function call on disk
     Support multiple positional and keyword arguments'''
+    assert cache_type in ['.pkl', '.json']
+    
     @wraps(func)
     def memoized_func(*args, **kwargs):
         try:
-            if 'cache_key' in kwargs:
-                cache_key = kwargs['cache_key']
-
-                func_id = identify((inspect.getsource(func))) + \
-                    '_cache_key_'+str(kwargs['cache_key'])
+            arg_names = inspect.getfullargspec(func).args
+            # if 'cache_key' in kwargs:
+            #     func_id = identify((inspect.getsource(func))) + \
+            #         '_cache_key_'+str(kwargs['cache_key'])
+            # else:
+            if arg_names[0] == 'self' and ignore_self:
+                func_id = identify((inspect.getsource(func), args[1:], kwargs))
             else:
                 func_id = identify((inspect.getsource(func), args, kwargs))
+                    
             cache_path = os.path.join(
-                AV_CACHE_DIR, 'funcs', func.__name__+'/'+func_id)
+                cache_dir, 'funcs', func.__name__+'/'+func_id+cache_type)
             mkdir_or_exist(os.path.dirname(cache_path))
 
-            if (os.path.exists(cache_path) and
-                    not func.__name__ in os.environ and
-                    not 'BUST_CACHE' in os.environ):
-                result = pickle.load(open(cache_path, 'rb'))
+            if os.path.exists(cache_path):
+                if verbose:
+                    logger.info(f'Load from cache file: {cache_path}')
+                result = load_json_or_pickle(cache_path)
             else:
+
                 result = func(*args, **kwargs)
-                pickle.dump(result, open(cache_path, 'wb'))
+                # pickle.dump(result, open(cache_path, 'wb'))
+                dump_json_or_pickle(result, cache_path)
             return result
         except (KeyError, AttributeError, TypeError, Exception) as e:
-            logger.warning(f'Exception: {e}, use default function call')
+            if verbose:
+                logger.warning(f'Exception: {e}, use default function call')
             return func(*args, **kwargs)
     return memoized_func
 
@@ -88,7 +96,7 @@ def imemoize(func):
 
 
 
-def multi_thread(func, call_args_list, pbar='tqdm', n_workers=4):
+def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
     """
     Execute a given function concurrently using multiple threads.
 
@@ -120,26 +128,28 @@ def multi_thread(func, call_args_list, pbar='tqdm', n_workers=4):
         results = multi_thread(add_numbers, args_list, pbar='tqdm', n_workers=2)
         print(results)  # Output: [3, 7, 11]
     """
-    key_args = inspect.getfullargspec(func).args
-    key_kwargs = inspect.getfullargspec(func).kwonlyargs
+    real_func = func.__dict__.get('__wrapped__', func)
+    key_args = inspect.getfullargspec(real_func).args
+    key_kwargs = inspect.getfullargspec(real_func).kwonlyargs
+
+    if len(key_args)+len(key_kwargs) == 1:
+        call_args_list = [[_] for _ in call_args_list]
     
     def wrapper(call_args):
         # is list or tuple
         if isinstance(call_args, (list, tuple)):
             call_args = dict(zip(key_args, call_args))
         return func(**call_args)
-    
-    # Function to update tqdm progress in a thread-safe manner
     def tqdm_updater(future, pbar):
-        try:
-            result = future.result()
-            with pbar.get_lock():
-                pbar.update(1)
-            return result
-        except Exception as e:
-            with pbar.get_lock():
-                pbar.update(1)
-            return e
+        # try:
+        result = future.result()
+        with pbar.get_lock():
+            pbar.update(1)
+        return result
+        # except Exception as e:
+        #     with pbar.get_lock():
+        #         pbar.update(1)
+        #     return e
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
