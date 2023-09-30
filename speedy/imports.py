@@ -1,3 +1,4 @@
+from fastcore.all import *
 import os
 import json
 import concurrent.futures
@@ -10,9 +11,6 @@ import pickle
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 import concurrent.futures
-from tqdm import tqdm
-
 import xxhash
 from loguru import logger
-from tqdm import tqdm
-from fastcore.all import *
+from tqdm.auto import tqdm

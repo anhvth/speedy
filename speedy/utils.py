@@ -38,24 +38,24 @@ def identify(x):
     return xxhash.xxh64(pickle.dumps(x), seed=0).hexdigest()
 
 
-def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', verbose=False, force=False):
+def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', verbose=False, cache_key=None):
     '''Cache result of function call on disk
     Support multiple positional and keyword arguments'''
     assert cache_type in ['.pkl', '.json']
-    
+
     @wraps(func)
     def memoized_func(*args, **kwargs):
         try:
             arg_names = inspect.getfullargspec(func).args
-            # if 'cache_key' in kwargs:
-            #     func_id = identify((inspect.getsource(func))) + \
-            #         '_cache_key_'+str(kwargs['cache_key'])
-            # else:
+            if cache_key is not None:
+                func_id = identify(
+                    (inspect.getsource(func)), kwargs[cache_key])
+
             if arg_names[0] == 'self' and ignore_self:
                 func_id = identify((inspect.getsource(func), args[1:], kwargs))
             else:
                 func_id = identify((inspect.getsource(func), args, kwargs))
-                    
+
             cache_path = os.path.join(
                 cache_dir, 'funcs', func.__name__+'/'+func_id+cache_type)
             mkdir_or_exist(os.path.dirname(cache_path))
@@ -94,8 +94,6 @@ def imemoize(func):
     return _f
 
 
-
-
 def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
     """
     Execute a given function concurrently using multiple threads.
@@ -121,9 +119,9 @@ def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
         # Create a list of argument tuples
         args_list = [(1, 2), (3, 4), (5, 6)]
         or list of dictionaries
-        
+
         args_list = [{'a': 1, 'b': 2}, {'a': 3, 'b': 4}, {'a': 5, 'b': 6}]
-        
+
         # Call the multi_thread function to execute add_numbers concurrently
         results = multi_thread(add_numbers, args_list, pbar='tqdm', n_workers=2)
         print(results)  # Output: [3, 7, 11]
@@ -134,28 +132,26 @@ def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
 
     if len(key_args)+len(key_kwargs) == 1:
         call_args_list = [[_] for _ in call_args_list]
-    
+
     def wrapper(call_args):
         # is list or tuple
         if isinstance(call_args, (list, tuple)):
             call_args = dict(zip(key_args, call_args))
         return func(**call_args)
+
     def tqdm_updater(future, pbar):
         # try:
         result = future.result()
         with pbar.get_lock():
             pbar.update(1)
         return result
-        # except Exception as e:
-        #     with pbar.get_lock():
-        #         pbar.update(1)
-        #     return e
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         if pbar:
             with tqdm(total=len(call_args_list)) as pbar:
-                future_to_args = {executor.submit(wrapper, args): args for args in call_args_list}
+                future_to_args = {executor.submit(
+                    wrapper, args): args for args in call_args_list}
                 for future in concurrent.futures.as_completed(future_to_args):
                     result = tqdm_updater(future, pbar)
                     results.append(result)
@@ -165,10 +161,12 @@ def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
 
     return results
 
+
 def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
-    logger.info('Multi processing {} | Num samples: {}', f.__name__, len(inputs))
+    logger.info('Multi processing {} | Num samples: {}',
+                f.__name__, len(inputs))
     pbar = tqdm(total=len(inputs), desc=desc)
-        
+
     with Pool(n_workers) as p:
         it = p.imap(f, inputs)
         return_list = []
@@ -176,6 +174,7 @@ def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
             return_list.append(ret)
             pbar.update()
     return return_list
+
 
 def pp(input, key_ignore=None, max_width=100, **kwargs):
     """
