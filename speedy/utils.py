@@ -94,87 +94,102 @@ def imemoize(func):
     return _f
 
 
-def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
-    """
-    Execute a given function concurrently using multiple threads.
+# def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
+#     """
+#     Execute a given function concurrently using multiple threads.
 
-    Args:
-        func (callable): The function to be executed concurrently.
-        call_args_list (list): A list of argument dictionaries or tuples to call the function with.
-            Each element of the list should correspond to the arguments required by the function.
-            If a tuple, the values are matched with the function's positional arguments.
-            If a dictionary, the keys should correspond to function's argument names.
-        pbar (str or None, optional): Progress bar library to use. Options are 'tqdm' or None.
-            'tqdm' shows a progress bar. Default is 'tqdm'.
-        n_workers (int, optional): Number of worker threads to use. Default is 4.
+#     Args:
+#         func (callable): The function to be executed concurrently.
+#         call_args_list (list): A list of argument dictionaries or tuples to call the function with.
+#             Each element of the list should correspond to the arguments required by the function.
+#             If a tuple, the values are matched with the function's positional arguments.
+#             If a dictionary, the keys should correspond to function's argument names.
+#         pbar (str or None, optional): Progress bar library to use. Options are 'tqdm' or None.
+#             'tqdm' shows a progress bar. Default is 'tqdm'.
+#         n_workers (int, optional): Number of worker threads to use. Default is 4.
 
-    Returns:
-        list: A list of results obtained from executing the function concurrently.
+#     Returns:
+#         list: A list of results obtained from executing the function concurrently.
 
-    Example:
-        # Define a function
-        def add_numbers(a, b):
-            return a + b
+#     Example:
+#         # Define a function
+#         def add_numbers(a, b):
+#             return a + b
 
-        # Create a list of argument tuples
-        args_list = [(1, 2), (3, 4), (5, 6)]
-        or list of dictionaries
+#         # Create a list of argument tuples
+#         args_list = [(1, 2), (3, 4), (5, 6)]
+#         or list of dictionaries
 
-        args_list = [{'a': 1, 'b': 2}, {'a': 3, 'b': 4}, {'a': 5, 'b': 6}]
+#         args_list = [{'a': 1, 'b': 2}, {'a': 3, 'b': 4}, {'a': 5, 'b': 6}]
 
-        # Call the multi_thread function to execute add_numbers concurrently
-        results = multi_thread(add_numbers, args_list, pbar='tqdm', n_workers=2)
-        print(results)  # Output: [3, 7, 11]
-    """
-    real_func = func.__dict__.get('__wrapped__', func)
-    key_args = inspect.getfullargspec(real_func).args
-    key_kwargs = inspect.getfullargspec(real_func).kwonlyargs
+#         # Call the multi_thread function to execute add_numbers concurrently
+#         results = multi_thread(add_numbers, args_list, pbar='tqdm', n_workers=2)
+#         print(results)  # Output: [3, 7, 11]
+#     """
+#     real_func = func.__dict__.get('__wrapped__', func)
+#     key_args = inspect.getfullargspec(real_func).args
+#     key_kwargs = inspect.getfullargspec(real_func).kwonlyargs
 
-    if len(key_args)+len(key_kwargs) == 1:
-        call_args_list = [[_] for _ in call_args_list]
+#     if len(key_args)+len(key_kwargs) == 1:
+#         call_args_list = [[_] for _ in call_args_list]
 
-    def wrapper(call_args):
-        # is list or tuple
-        if isinstance(call_args, (list, tuple)):
-            call_args = dict(zip(key_args, call_args))
-        return func(**call_args)
+#     def wrapper(call_args):
+#         # is list or tuple
+#         if isinstance(call_args, (list, tuple)):
+#             call_args = dict(zip(key_args, call_args))
+#         return func(**call_args)
 
-    def tqdm_updater(future, pbar):
-        # try:
-        result = future.result()
-        with pbar.get_lock():
-            pbar.update(1)
-        return result
+#     def tqdm_updater(future, pbar):
+#         # try:
+#         result = future.result()
+#         with pbar.get_lock():
+#             pbar.update(1)
+#         return result
 
-    results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-        if pbar:
-            with tqdm(total=len(call_args_list)) as pbar:
-                future_to_args = {executor.submit(
-                    wrapper, args): args for args in call_args_list}
-                for future in concurrent.futures.as_completed(future_to_args):
-                    result = tqdm_updater(future, pbar)
-                    results.append(result)
-        else:
-            for result in executor.map(wrapper, call_args_list):
-                results.append(result)
+#     results = []
+#     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+#         if pbar:
+#             with tqdm(total=len(call_args_list)) as pbar:
+#                 future_to_args = {executor.submit(
+#                     wrapper, args): args for args in call_args_list}
+#                 for future in concurrent.futures.as_completed(future_to_args):
+#                     result = tqdm_updater(future, pbar)
+#                     results.append(result)
+#         else:
+#             for result in executor.map(wrapper, call_args_list):
+#                 results.append(result)
 
-    return results
+#     return results
+
+
+def multi_process_executor(args):
+    global _global_function_to_execute  # using a global variable to store the function to be executed
+    # If args is a tuple, unpack it to send multiple parameters to the function
+    if isinstance(args, tuple):
+        return _global_function_to_execute(*args)
+    return _global_function_to_execute(args)
 
 
 def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
-    logger.info('Multi processing {} | Num samples: {}',
-                f.__name__, len(inputs))
-    pbar = tqdm(total=len(inputs), desc=desc)
-
+    global _global_function_to_execute  # set the global variable to the function to be executed
+    _global_function_to_execute = f
+    
+    logger.info('Multi processing {} | Num samples: {}', f.__name__, len(inputs))
+    
+    pbar = tqdm(total=len(inputs), desc=desc, disable=not verbose)
+    
+    results = []
     with Pool(n_workers) as p:
-        it = p.imap(f, inputs)
-        return_list = []
-        for i, ret in enumerate(it):
-            return_list.append(ret)
-            pbar.update()
-    return return_list
-
+        try:
+            for result in p.imap(multi_process_executor, inputs):
+                results.append(result)
+                pbar.update()
+        except Exception as e:
+            logger.error("Error occurred: {}", e)
+        finally:
+            pbar.close()
+    
+    return results
 
 def pp(input, key_ignore=None, max_width=100, **kwargs):
     """
