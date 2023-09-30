@@ -14,7 +14,9 @@ setup(
         'xxhash',
         'loguru',
         'fastcore',
-        'debugpy'
+        'debugpy',
+        'ipywidgets',
+        'jupyterlab'
     ],
     classifiers=[  # Provide information about your package for PyPI
         'License :: OSI Approved :: MIT License',
