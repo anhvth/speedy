@@ -8,14 +8,14 @@ def mkdir_or_exist(dir_name):
     return os.makedirs(dir_name, exist_ok=True)
 
 
-def dump_json_or_pickle(obj, fname):
+def dump_json_or_pickle(obj, fname, ensure_ascii=False):
     """
         Dump an object to a file, support both json and pickle
     """
     mkdir_or_exist(os.path.dirname(osp.abspath(fname)))
     if fname.endswith('.json'):
         with open(fname, 'w') as f:
-            json.dump(obj, f)
+            json.dump(obj, f, ensure_ascii=ensure_ascii)
     else:
         with open(fname, 'wb') as f:
             pickle.dump(obj, f)
@@ -25,7 +25,7 @@ def load_json_or_pickle(fname):
     """
         Load an object from a file, support both json and pickle
     """
-    if fname.endswith('.json'):
+    if fname.endswith('.json') or fname.endswith('.jsonl'):
         with open(fname, 'r') as f:
             return json.load(f)
     else:
