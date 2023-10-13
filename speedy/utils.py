@@ -12,7 +12,7 @@ def dump_json_or_pickle(obj, fname, ensure_ascii=False):
     """
         Dump an object to a file, support both json and pickle
     """
-    mkdir_or_exist(os.path.dirname(osp.abspath(fname)))
+    mkdir_or_exist(osp.abspath(os.path.dirname(osp.abspath(fname))))
     if fname.endswith('.json'):
         with open(fname, 'w') as f:
             json.dump(obj, f, ensure_ascii=ensure_ascii)
@@ -48,6 +48,7 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
         try:
             arg_names = inspect.getfullargspec(func).args
             if cache_key is not None:
+                logger.info(f'Use cache_key={kwargs[cache_key]}')
                 func_id = identify(
                     (inspect.getsource(func)), kwargs[cache_key])
 
@@ -59,7 +60,6 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
             cache_path = os.path.join(
                 cache_dir, 'funcs', func.__name__+'/'+func_id+cache_type)
             mkdir_or_exist(os.path.dirname(cache_path))
-
             if os.path.exists(cache_path):
                 if verbose:
                     logger.info(f'Load from cache file: {cache_path}')
@@ -77,6 +77,8 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
     return memoized_func
 
 
+
+
 def imemoize(func):
     """
         Memoize a function into memory, the function recaculate only 
@@ -92,6 +94,7 @@ def imemoize(func):
             ICACHE[ident_name] = result
         return result
     return _f
+
 
 
 # def multi_thread(func, call_args_list, pbar='tqdm', n_workers=16):
@@ -169,6 +172,18 @@ def multi_process_executor(args):
         return _global_function_to_execute(*args)
     return _global_function_to_execute(args)
 
+def flatten_list(list_of_lists):
+    """
+    Flatten a list of lists into a single list.
+
+    Parameters:
+    - list_of_lists (list of lists): The list to flatten.
+
+    Returns:
+    - list: A flattened list.
+    """
+    return [item for sublist in list_of_lists for item in sublist]
+
 
 def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
     global _global_function_to_execute  # set the global variable to the function to be executed
@@ -202,3 +217,40 @@ def pp(input, key_ignore=None, max_width=100, **kwargs):
         for key in key_ignore:
             input.pop(key, None)
     pprint.pprint(input, width=max_width, **kwargs)
+import inspect
+
+def get_arg_names(func):
+    return inspect.getfullargspec(func).args
+
+def memoize_v2(keys):
+    def decorator_memoize_v2(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            assert isinstance(keys, (list, tuple))
+            arg_names = get_arg_names(func)
+            # if not isinstance(keys, list):
+            #     keys = [keys]
+            def get_key_value(key):
+                # k = kwargs.get(key) if key in kwargs else next((arg for arg in args if isinstance(arg, str)), None)
+                if key in arg_names:
+                    return args[arg_names.index(key)]
+                if key in kwargs:
+                    return kwargs[key]
+            
+            values = [get_key_value(key) for key in keys]
+
+            # If no valid key, simply run the function
+            if keys is None:
+                return func(*args, **kwargs)
+
+            key_id = identify(values)  # Assuming 'identify' generates a unique hash
+            func_id = identify(inspect.getsource(func))
+            key_names = '_'.join(keys)
+            cache_path = osp.join(AV_CACHE_DIR, f'{func.__name__}_{func_id}', f'{key_names}_{key_id}.pkl')
+            if osp.exists(cache_path):
+                return load_json_or_pickle(cache_path)
+            result = func(*args, **kwargs)
+            dump_json_or_pickle(result, cache_path)
+            return result
+        return wrapper
+    return decorator_memoize_v2
