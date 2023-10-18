@@ -52,7 +52,7 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
                 func_id = identify(
                     (inspect.getsource(func)), kwargs[cache_key])
 
-            if arg_names[0] == 'self' and ignore_self:
+            if len(arg_names) > 0 and arg_names[0] == 'self' and ignore_self:
                 func_id = identify((inspect.getsource(func), args[1:], kwargs))
             else:
                 func_id = identify((inspect.getsource(func), args, kwargs))
@@ -71,12 +71,12 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
                 dump_json_or_pickle(result, cache_path)
             return result
         except (KeyError, AttributeError, TypeError, Exception) as e:
-            if verbose:
-                logger.warning(f'Exception: {e}, use default function call')
+            import traceback
+            traceback.print_exc()
+
+            logger.warning(f'Exception: {e}, use default function call')
             return func(*args, **kwargs)
     return memoized_func
-
-
 
 
 def imemoize(func):
