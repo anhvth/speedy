@@ -32,6 +32,37 @@ def load_json_or_pickle(fname):
         with open(fname, 'rb') as f:
             return pickle.load(f)
 
+def load_by_ext(fname, do_memoize=False, **pd_kwargs):
+    def load_csv(path):
+        import pandas as pd
+        return pd.read_csv(path, **pd_kwargs)
+
+    def load_txt(path):
+        with open(path, 'r') as f:
+            return f.read().splitlines()
+
+    def load_default(path):
+        return load_json_or_pickle(path)
+
+    handlers = {
+        '.csv': load_csv,
+        '.txt': load_txt,
+        '.pkl': load_default,
+        '.json': load_default,
+        '.jsonl': load_default
+    }
+
+    ext = os.path.splitext(fname)[-1]  # Get file extension
+    load_fn = handlers.get(ext)
+
+    if not load_fn:
+        raise NotImplementedError(f"File type {ext} not supported")
+
+    if do_memoize:
+        load_fn = memoize(load_fn)
+
+    return load_fn(fname)
+
 
 def identify(x):
     '''Return an hex digest of the input'''

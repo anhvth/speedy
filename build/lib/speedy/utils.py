@@ -20,6 +20,8 @@ def dump_json_or_pickle(obj, fname, ensure_ascii=False):
         with open(fname, 'wb') as f:
             pickle.dump(obj, f)
 
+                
+    
 
 def load_json_or_pickle(fname):
     """
