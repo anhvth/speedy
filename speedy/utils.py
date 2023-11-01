@@ -19,6 +19,17 @@ def dump_json_or_pickle(obj, fname, ensure_ascii=False):
     else:
         with open(fname, 'wb') as f:
             pickle.dump(obj, f)
+import time
+
+def timef(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"{func.__name__} took {execution_time:0.2f} seconds to execute.")
+        return result
+    return wrapper
 
 
 def load_json_or_pickle(fname):
@@ -33,7 +44,7 @@ def load_json_or_pickle(fname):
             return pickle.load(f)
 
 def load_by_ext(fname, do_memoize=False, **pd_kwargs):
-    def load_csv(path):
+    def load_csv_csv(path):
         import pandas as pd
         return pd.read_csv(path, **pd_kwargs)
 
@@ -41,11 +52,22 @@ def load_by_ext(fname, do_memoize=False, **pd_kwargs):
         with open(path, 'r') as f:
             return f.read().splitlines()
 
+    
     def load_default(path):
+        def _load_jsonl_by_line(path):
+            lines = [json.loads(_) for _ in open(path).read().splitlines()]
+            return lines
+        if path.endswith('.jsonl'):
+            try:
+                return load_json_or_pickle(path)
+            except:
+                return _load_jsonl_by_line(path)
         return load_json_or_pickle(path)
-
+    
+        
     handlers = {
-        '.csv': load_csv,
+        '.csv': load_csv_csv,
+        '.tsv': load_csv_csv,
         '.txt': load_txt,
         '.pkl': load_default,
         '.json': load_default,
@@ -217,6 +239,9 @@ def flatten_list(list_of_lists):
 
 
 def multi_process(f, inputs, n_workers=16, desc='', verbose=True):
+    if os.environ.get('DEBUG', '0') == '1':
+        logger.info('DEBUGING set num worker to 1')
+        n_workers = 1
     global _global_function_to_execute  # set the global variable to the function to be executed
     _global_function_to_execute = f
     
