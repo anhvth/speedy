@@ -16,7 +16,9 @@ setup(
         'fastcore',
         'debugpy',
         'ipywidgets',
-        'jupyterlab'
+        'jupyterlab',
+        'ipdb',
+        
     ],
     classifiers=[  # Provide information about your package for PyPI
         'License :: OSI Approved :: MIT License',
