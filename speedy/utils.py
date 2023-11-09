@@ -13,12 +13,14 @@ def dump_json_or_pickle(obj, fname, ensure_ascii=False):
         Dump an object to a file, support both json and pickle
     """
     mkdir_or_exist(osp.abspath(os.path.dirname(osp.abspath(fname))))
-    if fname.endswith('.json'):
+    if fname.endswith('.json') or fname.endswith('.jsonl'):
         with open(fname, 'w') as f:
             json.dump(obj, f, ensure_ascii=ensure_ascii)
-    else:
+    elif fname.endswith('.pkl'):
         with open(fname, 'wb') as f:
             pickle.dump(obj, f)
+    else:
+        raise NotImplemented(fname)
 import time
 
 def timef(func):
@@ -91,6 +93,8 @@ def identify(x):
     return xxhash.xxh64(pickle.dumps(x), seed=0).hexdigest()
 
 
+
+
 def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', verbose=False, cache_key=None):
     '''Cache result of function call on disk
     Support multiple positional and keyword arguments'''
@@ -100,15 +104,17 @@ def memoize(func, ignore_self=True, cache_dir=AV_CACHE_DIR, cache_type='.pkl', v
     def memoized_func(*args, **kwargs):
         try:
             arg_names = inspect.getfullargspec(func).args
+            func_source = inspect.getsource(func)
+            func_source = func_source.replace(' ','')
             if cache_key is not None:
                 logger.info(f'Use cache_key={kwargs[cache_key]}')
                 func_id = identify(
-                    (inspect.getsource(func)), kwargs[cache_key])
+                    (func_source), kwargs[cache_key])
 
             if len(arg_names) > 0 and arg_names[0] == 'self' and ignore_self:
-                func_id = identify((inspect.getsource(func), args[1:], kwargs))
+                func_id = identify((func_source, args[1:], kwargs))
             else:
-                func_id = identify((inspect.getsource(func), args, kwargs))
+                func_id = identify((func_source, args, kwargs))
 
             cache_path = os.path.join(
                 cache_dir, 'funcs', func.__name__+'/'+func_id+cache_type)

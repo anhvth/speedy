@@ -18,14 +18,9 @@ setup(
         'ipywidgets',
         'jupyterlab',
         'ipdb',
+        'scikit-learn',
+        'matplotlib',
+        'pandas',
         
-    ],
-    classifiers=[  # Provide information about your package for PyPI
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
     ],
 )
