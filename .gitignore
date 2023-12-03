@@ -2,3 +2,4 @@ speedy/__pycache__/
 *.egg-info/
 .cache
 build/
+.hypothesis/

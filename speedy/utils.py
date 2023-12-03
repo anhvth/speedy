@@ -316,3 +316,13 @@ def memoize_v2(keys):
             return result
         return wrapper
     return decorator_memoize_v2
+import sys
+
+def is_interactive():
+    try:
+        # This will be True in Jupyter notebooks and IPython environments
+        get_ipython
+        return True
+    except NameError:
+        # Check if the script is run with arguments or as a standalone script
+        return len(sys.argv) == 1
