@@ -326,3 +326,9 @@ def is_interactive():
     except NameError:
         # Check if the script is run with arguments or as a standalone script
         return len(sys.argv) == 1
+
+
+def set_trace_by_rank(rank=0):
+    local_rank = int(os.environ.get('LOCAL_RANK', '-1'))
+    if local_rank == rank:
+        return ipdb.set_trace
