@@ -46,9 +46,9 @@ def load_json_or_pickle(fname):
             return pickle.load(f)
 
 def load_by_ext(fname, do_memoize=False, **pd_kwargs):
-    def load_csv_csv(path):
+    def load_csv_csv(path, **pd_kwargs):
         import pandas as pd
-        return pd.read_csv(path, **pd_kwargs)
+        return pd.read_csv(path, engine='pyarrow', **pd_kwargs)
 
     def load_txt(path):
         with open(path, 'r') as f:
@@ -59,7 +59,7 @@ def load_by_ext(fname, do_memoize=False, **pd_kwargs):
         def _load_jsonl_by_line(path):
             lines = [json.loads(_) for _ in open(path).read().splitlines()]
             return lines
-        if path.endswith('.jsonl'):
+        if path.endswith('.jsonl') or path.endswith('.json'):
             try:
                 return load_json_or_pickle(path)
             except:
