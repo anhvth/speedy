@@ -46,6 +46,14 @@ def load_json_or_pickle(fname):
             return pickle.load(f)
 
 def load_by_ext(fname, do_memoize=False, **pd_kwargs):
+    if '*' in fname:
+        paths = glob(fname)
+        paths = list(sorted(paths))
+        return multi_process(load_by_ext, paths, n_workers=16)
+    elif isinstance(fname, list):
+        paths = fname
+        return multi_process(load_by_ext, paths, n_workers=16)
+    
     def load_csv_csv(path, **pd_kwargs):
         import pandas as pd
         return pd.read_csv(path, engine='pyarrow', **pd_kwargs)
