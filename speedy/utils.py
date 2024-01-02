@@ -292,31 +292,34 @@ import inspect
 def get_arg_names(func):
     return inspect.getfullargspec(func).args
 
-def memoize_v2(keys):
+def memoize_v2(keys, cache_dir=AV_CACHE_DIR):
     def decorator_memoize_v2(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             assert isinstance(keys, (list, tuple))
-            arg_names = get_arg_names(func)
-            # if not isinstance(keys, list):
-            #     keys = [keys]
-            def get_key_value(key):
-                # k = kwargs.get(key) if key in kwargs else next((arg for arg in args if isinstance(arg, str)), None)
-                if key in arg_names:
-                    return args[arg_names.index(key)]
-                if key in kwargs:
-                    return kwargs[key]
             
-            values = [get_key_value(key) for key in keys]
-
-            # If no valid key, simply run the function
+            args_key_values = {}
+            # merge args and kwargs
+            for i, arg in enumerate(args):
+                arg_name = get_arg_names(func)[i]
+                
+                args_key_values[arg_name] = arg
+            for key, value in kwargs.items():
+                args_key_values[key] = value
+                
+            values = []
+            for key in keys:
+                assert key in args_key_values, f'Key {key} not found in {args_key_values.keys()}'
+                v = args_key_values[key]
+                values.append(v)
             if keys is None:
                 return func(*args, **kwargs)
 
             key_id = identify(values)  # Assuming 'identify' generates a unique hash
-            func_id = identify(inspect.getsource(func))
+            func_source = inspect.getsource(func)
+            func_id = identify(func_source.replace(' ', ''))
             key_names = '_'.join(keys)
-            cache_path = osp.join(AV_CACHE_DIR, f'{func.__name__}_{func_id}', f'{key_names}_{key_id}.pkl')
+            cache_path = osp.join(cache_dir, f'{func.__name__}_{func_id}', f'{key_names}_{key_id}.pkl')
             if osp.exists(cache_path):
                 return load_json_or_pickle(cache_path)
             result = func(*args, **kwargs)
