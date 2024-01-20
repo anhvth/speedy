@@ -19,4 +19,5 @@ import ipdb
 import threading
 import queue
 from fastcore.all import threaded
-# print('Imported fastcore.all, os, json, concurrent.futures, inspect, json, multiprocessing, os.path, pickle, ThreadPoolExecutor, wraps, xxhash, loguru, tqdm, glob, ipdb')
+# print('Imported fastcore.all, os, json, concurrent.futures, inspect, json, multiprocessing, os.path, pickle, ThreadPoolExecutor, wraps, xxhash, loguru, tqdm, glob, ipdb')import json
+from tabulate import tabulate
