@@ -343,3 +343,29 @@ def set_trace_by_rank(rank=0):
     local_rank = int(os.environ.get('LOCAL_RANK', '-1'))
     if local_rank == rank:
         return ipdb.set_trace
+
+
+def multi_thread(function, list_inputs):
+    def worker(input, output_queue):
+        result = function(input)
+        output_queue.put(result)
+
+    threads = []
+    output_queue = queue.Queue()
+
+    # Start a new thread for each input
+    for input in list_inputs:
+        thread = threading.Thread(target=worker, args=(input, output_queue))
+        threads.append(thread)
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    # Collect all results
+    list_outputs = []
+    while not output_queue.empty():
+        list_outputs.append(output_queue.get())
+
+    return list_outputs
