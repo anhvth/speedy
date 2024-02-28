@@ -178,7 +178,10 @@ def imemoize(func):
 
     return _f
 
+
 import functools
+
+
 def imemoize_v2(keys):
     """
     Memoize a function into memory, the function recalculates only
@@ -346,30 +349,34 @@ def set_trace_by_rank(rank=0):
         return ipdb.set_trace
 
 
-def multi_thread(function, list_inputs):
-    def worker(input, output_queue):
-        result = function(input)
-        output_queue.put(result)
+from concurrent.futures import ThreadPoolExecutor
 
-    threads = []
-    output_queue = queue.Queue()
 
-    # Start a new thread for each input
-    for input in list_inputs:
-        thread = threading.Thread(target=worker, args=(input, output_queue))
-        threads.append(thread)
-        thread.start()
+def multi_thread(func, inputs, workers=4):
+    """
+    Executes a function across multiple threads, distributing the inputs across the threads,
+    with a progress bar indicating the completion status.
 
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
+    Parameters:
+    - func: The function to execute. This function should accept a single argument.
+    - inputs: An iterable of inputs to be passed to the function.
+    - workers: The number of threads to use. Default is 4.
 
-    # Collect all results
-    list_outputs = []
-    while not output_queue.empty():
-        list_outputs.append(output_queue.get())
-
-    return list_outputs
+    Returns:
+    - A list of results obtained by applying the func to each item in inputs, with progress tracked via tqdm.
+    """
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        # Prepare to track progress with tqdm
+        results = []
+        # Use list to collect futures if you need to maintain order
+        future_to_input = {executor.submit(func, inp): inp for inp in inputs}
+        for future in tqdm(
+            concurrent.futures.as_completed(future_to_input),
+            total=len(inputs),
+            desc="Processing",
+        ):
+            results.append(future.result())
+    return results
 
 
 def print_table(data):
