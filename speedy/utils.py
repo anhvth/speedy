@@ -150,9 +150,10 @@ def memoize(
                 dump_json_or_pickle(result, cache_path)
             return result
         except (KeyError, AttributeError, TypeError, Exception) as e:
+            print('============')
             import traceback
-
             traceback.print_exc()
+            print('============')
 
             logger.warning(f"Exception: {e}, use default function call")
             return func(*args, **kwargs)
