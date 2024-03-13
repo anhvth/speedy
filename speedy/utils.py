@@ -353,10 +353,14 @@ def set_trace_by_rank(rank=0):
 from concurrent.futures import ThreadPoolExecutor
 
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+
 def multi_thread(func, inputs, workers=4):
     """
     Executes a function across multiple threads, distributing the inputs across the threads,
-    with a progress bar indicating the completion status.
+    with a progress bar indicating the completion status. Ensures results are ordered according
+    to the order of inputs.
 
     Parameters:
     - func: The function to execute. This function should accept a single argument.
@@ -364,20 +368,33 @@ def multi_thread(func, inputs, workers=4):
     - workers: The number of threads to use. Default is 4.
 
     Returns:
-    - A list of results obtained by applying the func to each item in inputs, with progress tracked via tqdm.
+    - A list of results obtained by applying the func to each item in inputs, with progress tracked via tqdm,
+      ensuring that the output list is in the same order as the inputs.
     """
+    # Initialize a ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        # Prepare to track progress with tqdm
+        # Use `submit` to start the operations and retain their order with futures
+        futures = [executor.submit(func, inp) for inp in inputs]
+        # Initialize an empty list to store results in order
         results = []
-        # Use list to collect futures if you need to maintain order
-        future_to_input = {executor.submit(func, inp): inp for inp in inputs}
-        for future in tqdm(
-            concurrent.futures.as_completed(future_to_input),
-            total=len(inputs),
-            desc="Processing",
-        ):
+
+        # Progress bar setup with tqdm, iterating over futures as they complete
+        for future in tqdm(as_completed(futures), total=len(inputs), desc="Processing"):
+            # Adding results to the list as they are available, maintaining the order
             results.append(future.result())
-    return results
+
+    # Since the futures are submitted and tracked in order, results are added in order.
+    # However, `as_completed` will yield futures as they finish, so we adjust our approach below.
+
+    # Instead of collecting results directly as they're completed, create an ordered list to match input order.
+    ordered_results = [None] * len(inputs)
+    # Map each future back to its original index
+    for index, future in enumerate(futures):
+        # Place the result into the corresponding position
+        ordered_results[index] = future.result()
+    
+    return ordered_results
+
 
 
 def print_table(data):
