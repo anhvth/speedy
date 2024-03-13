@@ -26,15 +26,18 @@ class Clock:
             custom_logger(msg)
         else:
             logger.info(msg)
+
     def since_last_check(self):
         now = time.time()
         elapsed = now - self.last_check
         self.last_check = now
         return elapsed
+
     def update(self, name):
         if not name in self.time_table:
             self.time_table[name] = 0
         self.time_table[name] += self.since_last_check()
+
     def print_table(self, every=1):
         now = time.time()
         if now - self.last_print > every:
