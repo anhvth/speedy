@@ -120,7 +120,9 @@ def memoize(
     """Cache result of function call on disk
     Support multiple positional and keyword arguments"""
     assert cache_type in [".pkl", ".json"]
-
+    if os.environ.get("AV_MEMOIZE_DISABLE", "0") == "1":
+        logger.info("Memoize is disabled")
+        return func
     @wraps(func)
     def memoized_func(*args, **kwargs):
         try:
@@ -356,7 +358,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
-def multi_thread(func, inputs, workers=4):
+def multi_thread(func, inputs, workers=4, verbose=True):
     """
     Executes a function across multiple threads, distributing the inputs across the threads,
     with a progress bar indicating the completion status. Ensures results are ordered according
@@ -378,10 +380,12 @@ def multi_thread(func, inputs, workers=4):
         # Initialize an empty list to store results in order
         results = []
 
-        # Progress bar setup with tqdm, iterating over futures as they complete
-        for future in tqdm(as_completed(futures), total=len(inputs), desc="Processing"):
-            # Adding results to the list as they are available, maintaining the order
-            results.append(future.result())
+        if verbose:
+            for future in tqdm(as_completed(futures), total=len(inputs), desc="Processing"):
+                results.append(future.result())
+        else:
+            for future in as_completed(futures):
+                results.append(future.result())
 
     # Since the futures are submitted and tracked in order, results are added in order.
     # However, `as_completed` will yield futures as they finish, so we adjust our approach below.
@@ -432,3 +436,18 @@ def print_table(data):
 
     table = __get_table(data)
     print(table)
+
+
+
+def convert_to_builtin_python(input):
+    if isinstance(input, dict):
+        return {k: convert_to_builtin_python(v) for k, v in input.items()}
+    elif isinstance(input, list):
+        return [convert_to_builtin_python(v) for v in input]
+    elif type(input) in [int, float, str, bool, type(None)]:
+        return input
+    elif isinstance(input, BaseModel):
+        data = input.model_dump_json()
+        return convert_to_builtin_python(data)
+    else:
+        raise ValueError(f"Unsupport type {type(input)}")
