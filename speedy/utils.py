@@ -7,15 +7,32 @@ ICACHE = dict()
 def mkdir_or_exist(dir_name):
     return os.makedirs(dir_name, exist_ok=True)
 
+def dump_jsonl(list_dictionaries, file_name="output.jsonl"):
+    """
+    Dumps a list of dictionaries to a file in JSON Lines format.
+
+    Parameters:
+    - list_dictionaries (list): A list of dictionaries to be written to the file.
+    - file_name (str, optional): The name of the output file. Defaults to "output.jsonl".
+    """
+    # Open or create the file with the specified file_name in write mode
+    with open(file_name, 'w', encoding='utf-8') as file:
+        # Iterate over each dictionary in the list
+        for dictionary in list_dictionaries:
+            # Dump the dictionary to a JSON string and write it to the file followed by a newline
+            file.write(json.dumps(dictionary, ensure_ascii=False) + '\n')
+
 
 def dump_json_or_pickle(obj, fname, ensure_ascii=False):
     """
     Dump an object to a file, support both json and pickle
     """
     mkdir_or_exist(osp.abspath(os.path.dirname(osp.abspath(fname))))
-    if fname.endswith(".json") or fname.endswith(".jsonl"):
+    if fname.endswith(".json"):
         with open(fname, "w") as f:
             json.dump(obj, f, ensure_ascii=ensure_ascii)
+    elif fname.endswith(".jsonl"):
+        dump_jsonl(obj, fname)
     elif fname.endswith(".pkl"):
         with open(fname, "wb") as f:
             pickle.dump(obj, f)
