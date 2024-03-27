@@ -454,7 +454,10 @@ def print_table(data):
     table = __get_table(data)
     print(table)
 
-
+class PydanticList(List[BaseModel]):
+    def to_pandas(self):
+        import pandas as pd
+        return pd.DataFrame([_.model_dump() for _ in self])
 
 def convert_to_builtin_python(input):
     if isinstance(input, dict):
