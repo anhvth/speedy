@@ -23,14 +23,14 @@ def dump_jsonl(list_dictionaries, file_name="output.jsonl"):
             file.write(json.dumps(dictionary, ensure_ascii=False) + '\n')
 
 
-def dump_json_or_pickle(obj, fname, ensure_ascii=False):
+def dump_json_or_pickle(obj, fname, ensure_ascii=False, indent=4):
     """
     Dump an object to a file, support both json and pickle
     """
     mkdir_or_exist(osp.abspath(os.path.dirname(osp.abspath(fname))))
     if fname.endswith(".json"):
         with open(fname, "w") as f:
-            json.dump(obj, f, ensure_ascii=ensure_ascii)
+            json.dump(obj, f, ensure_ascii=ensure_ascii, indent=indent)
     elif fname.endswith(".jsonl"):
         dump_jsonl(obj, fname)
     elif fname.endswith(".pkl"):
@@ -38,7 +38,6 @@ def dump_json_or_pickle(obj, fname, ensure_ascii=False):
             pickle.dump(obj, f)
     else:
         raise NotImplemented(fname)
-
 
 import time
 
