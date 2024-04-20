@@ -369,11 +369,10 @@ def set_trace_by_rank(rank=0):
         return ipdb.set_trace
 
 
-from concurrent.futures import ThreadPoolExecutor
-
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from tqdm import tqdm
+
 
 def multi_thread(func, inputs, workers=4, verbose=True):
     """
