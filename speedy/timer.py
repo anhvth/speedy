@@ -46,6 +46,6 @@ class Clock:
             desc = "Time table: "
             for name, t in self.time_table.items():
                 percentage = (t / total_time) * 100
-                desc += "{}: {:.2f}%, ".format(name, percentage)
+                desc += "{}: {:.2f}%, {}s".format(name, percentage, t)
             print(desc)
             self.last_print = now
