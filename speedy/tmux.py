@@ -41,6 +41,7 @@ def start_in_tmux(cmd, session_name, window_name, root_dir):
             run_tmux_command(f"tmux new-window -t {session_name} -n {window_name}")
             run_tmux_command(f"tmux send-keys -t {session_name}:{window_name} '{cmd}' C-m")
 
+__all__ = ["start_in_tmux"]
 # Example usage
 if __name__ == "__main__":
     start_in_tmux("echo Hello, World!", "my_session", "my_window", "/home/user/projects")

@@ -4,6 +4,7 @@ import argparse
 from typing import List
 from tabulate import tabulate
 
+
 @dataclass
 class CommandLineArgs:
     # This class will be extended to define specific arguments
@@ -62,3 +63,4 @@ class GenericArgumentParser:
 
     def get_arguments(self) -> CommandLineArgs:
         return self.args
+__all__ = ['CommandLineArgs', 'GenericArgumentParser']

@@ -1,6 +1,6 @@
 import time
 from loguru import logger
-
+__all__ = ['Clock']
 
 class Clock:
     def __init__(self, start_now=True):

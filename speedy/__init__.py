@@ -5,3 +5,4 @@ from .imports_ds import *
 from .timer import Clock
 from .utils import *
 from .tmux import start_in_tmux
+from .logger import setup_logger, logger
