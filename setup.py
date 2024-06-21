@@ -22,5 +22,6 @@ setup(
         "matplotlib",
         "pandas",
         "tabulate",
+        "pydantic",
     ],
 )
